@@ -10,11 +10,13 @@ public:
     double x() const;
     double y() const;
     double z() const;
+    double norm() const;
 
     void operator*=(double a);
 
     Vector3D operator+(const Vector3D& other) const;
     Vector3D operator-(const Vector3D& other) const;
+
     friend Vector3D operator*(const Vector3D& v, double a);
     friend std::ostream& operator << (std::ostream&, const Vector3D&);
 };
@@ -31,6 +33,7 @@ public:
     double x() const;
     double y() const;
     double z() const;
+    double norm() const;
 
     friend std::ostream& operator << (std::ostream&, const Segment3D&);
 };

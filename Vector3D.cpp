@@ -22,6 +22,9 @@ double Vector3D::y() const {
 double Vector3D::z() const {
     return Z;
 }
+double Vector3D::norm() const {
+    return sqrt(x() * x() + y() * y() + z() * z());
+}
 
 void Vector3D::operator *= (double a) {
     *this = Vector3D(x() * a, y() * a, z() * a);
@@ -41,6 +44,10 @@ ostream& operator << (std::ostream& s, const Vector3D& v) {
     return s;
 }
 
+double dot(const Vector3D v1, const Vector3D v2) {
+    return (v1.x() * v2.x() + v1.y() * v2.y() + v1.z() * v2.z());
+}
+
 Segment3D::Segment3D() : START(Vector3D()), END(Vector3D()) {}
 Segment3D::Segment3D(Vector3D start, Vector3D end) : START(start), END(end) {}
 
@@ -56,6 +63,10 @@ double Segment3D::y() const {
 double Segment3D::z() const {
     return toVector3D().z();
 }
+double Segment3D::norm() const {
+    return toVector3D().norm();
+}
+
 ostream& operator << (ostream& s, const Segment3D& seg) {
     s << seg.START << " -> " << seg.END;
     return s;
@@ -114,12 +125,43 @@ optional<Vector3D> Intersect(const Segment3D& v1, const Segment3D& v2) {
 
    triangularize(matr);
 
-   if (abs(matr[2][2]) > eps) 
+   double a, b;
+   if (abs(matr[2][2]) > eps) // нижняя строка не пустая -- решений нет
        return {};
-   if (abs(matr[1][1]) < eps || matr[0][0] < eps) 
-       return {};
-   double b = matr[1][2] / matr[1][1];
-   double a = (matr[0][2] - matr[0][1] * b) / matr[0][0];
+   if (abs(matr[1][1]) < eps) { 
+       if (abs(matr[1][2]) > eps) // вторая строка 0 * b != 0 -- нет решений
+           return {};
+       // вторая строка пустая
+       if (abs(matr[0][0]) < eps && abs(matr[0][1]) < eps) // нельзя найти ни а ни b
+           return {};
+       if (abs(matr[0][0]) < eps && abs(matr[0][1]) > eps) { // можно найти b, v1 -- точка
+           b = matr[0][2] / matr[0][1];
+           if (b < 0. || b > 1.) // проверка, что точка лежит в пределах v2
+               return {};
+           return v1.START;
+       }
+       else if (abs(matr[0][0]) > eps && abs(matr[0][1]) < eps) { // можно найти a, v2 -- точка
+           a = matr[0][2] / matr[0][0];
+           if (a < 0. || a > 1.) // проверка, что точка лежит в пределах v1
+               return {};
+           return v2.START;
+       }
+       double dot_prod = dot(v1.toVector3D(), v2.toVector3D()); // векторы коллинеарны, знак скалярных произведений указывает взаимное направление
+       if (dot_prod > eps) // если векторы сонаправлены
+           if ((v1.START - v2.END).norm() < eps) // либо начало первого вектора == конец второго
+               return v1.START;
+           else if ((v1.END - v2.START).norm() < eps) // либо начало второго вектора == начало первого
+               return v1.END;
+           else 
+               return {}; // либо векторы наложены => нет единственного решения
+       if ((v1.START - v2.START).norm() < eps) // случай с разнонаправленными векторами, либо сопадают начала
+           return v1.START;
+       else if ((v1.END - v2.END).norm() < eps) // либо концы
+           return v1.END;
+       return {}; // иначе наложение, т.е. нет единственного решения
+   }
+   b = matr[1][2] / matr[1][1];
+   a = (matr[0][2] - matr[0][1] * b) / matr[0][0];
    if (b < 0. || b > 1. || a < 0. || b > 1.) 
        return {};
    return v2.START + v2.toVector3D() * b;
