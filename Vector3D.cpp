@@ -1,8 +1,9 @@
 ﻿// Vector3D.cpp : Этот файл содержит функцию "main". Здесь начинается и заканчивается выполнение программы.
 //
 
-#include <iostream>
+#include<iostream>
 #include<cmath>
+#include<optional>
 #include "Vector3D.h"
 
 constexpr double eps = std::numeric_limits<double>::epsilon();
@@ -60,7 +61,7 @@ ostream& operator << (std::ostream& s, const Segment3D& seg) {
     return s;
 }
 
-int max_col(double* matr[], int col) { //  функция ищет номер ряда, в котором находится максимальный по модулю элемент под диагональю
+int max_col(double matr[3][3], int col) { //  функция ищет номер ряда, в котором находится максимальный по модулю элемент под диагональю
     double max = abs(matr[col][col]);
     int m = col;
     for (int i = col + 1; i < 3; i++) {
@@ -72,37 +73,39 @@ int max_col(double* matr[], int col) { //  функция ищет номер р
     }
     return m;
 }
-void swap_rows(double* matr[], int r1, int r2) { // меняет ряды r1 и r2 местами
+void swap_rows(double matr[3][3], int r1, int r2) { // меняет ряды r1 и r2 местами
     for (int i = 0; i < 3; i++)
         swap(matr[r1][i], matr[r2][i]);
 }
-void triangularize(double* matr[]) {
-    double c, temp;
+void triangularize(double matr[3][3]) {
+    double c;
 
     int n = max_col(matr, 0); // поиск ведущего ряда для нулевого столбца
     swap_rows(matr, 0, n); // меняем первую и ведущую строку
-    if (abs(matr[0][0]) > eps) // проверяем элемент [0][0], еси нулевой -> переходим к столбцу 1
-        for (int i = 1; i < 3; i++) {
-            temp = matr[i][0];
-            if (abs(temp) < eps) continue; // если элемент  нулевого столбца в данном ряду 0, переходим к следующей строке
-            c = matr[0][0] / temp; // коэф. пропорциональности
-            for (int j = 0; j < 3; j++) // отнимаем от рядов 1 и 2 строку 0 с учетом коэф.
-                matr[i][j] -= c * matr[i][j];
+    if (abs(matr[0][0]) > eps) { // проверяем элемент [0][0], если нулевой -> переходим к столбцу 1
+        c = matr[0][0]; // сохраняем значение [0][0]
+        for (int i = 0; i < 3; i++) // делим 0 строку на первый элемент
+            matr[0][i] /= c;
+        for (int i = 1; i < 3; i++) { // от i-ой строки отнимаем нулевую, домноженную на нулевой элемент данной строки
+            c = matr[i][0]; // сохраняем нулевой элемент данной строки
+            for (int j = 0; j < 3; j++)
+                matr[i][j] -= c * matr[0][j];
         }
+    }
 
     n = max_col(matr, 1); //аналогично для 1 столбца
     swap_rows(matr, 1, n);
     if (abs(matr[1][1]) > eps) { // проверяем элемент [1][1], если нулевой, то приведение окончено
-        temp = matr[2][1];
-        if (abs(temp) > eps) { // если элемент [2][1] нулевой, приведение окончено
-            c = matr[1][1] / temp;
-            for (int i = 0; i < 3; i++)
-                matr[2][i] -= c * matr[2][i]; // отнимаем от ряда 2 ряд 1 с учетом коэф.
-        }
+        c = matr[1][1]; // сохраняем элемент [1][1]
+        for (int i = 1; i < 3; i++) // делим элементы 1-ой строки на элемент [1][1]
+            matr[1][i] /= c;
+        c = matr[2][1]; // сохраняем элемент [2][1]
+        for (int i = 1; i < 3; i++) // отнимаем от последней строки строку 1 с домножением на элемент [2][1]
+            matr[2][i] -= c * matr[1][i];
     }
 }
-Vector3D Intersect(const Segment3D& v1, const Segment3D& v2) {
-   double* matr[3];
+optional<Vector3D> Intersect(const Segment3D& v1, const Segment3D& v2) {
+   double matr[3][3];
 
    //заполнение матрицы { v1, -v2 | s2-s1 }
    matr[0][0] = v1.x(); matr[0][1] = -v2.x(); matr[0][2] = v2.START.x() - v1.START.x();
@@ -111,11 +114,14 @@ Vector3D Intersect(const Segment3D& v1, const Segment3D& v2) {
 
    triangularize(matr);
 
-    if (abs(matr[2][2]) > eps) return Vector3D();
-    if (abs(matr[1][1]) < eps || matr[0][0] < eps) return Vector3D();
-    double b = matr[1][2] / matr[1][1];
-    if (b < 0. || b > 1.) return Vector3D();
-    return v2.START + v2.toVector3D() * b;
+   if (abs(matr[2][2]) > eps) 
+       return {};
+   if (abs(matr[1][1]) < eps || matr[0][0] < eps) 
+       return {};
+   double b = matr[1][2] / matr[1][1];
+   if (b < 0. || b > 1.) 
+       return {};
+   return v2.START + v2.toVector3D() * b;
 }
 
 int main()
@@ -137,8 +143,11 @@ int main()
     e = Vector3D(x, y, z);
     Segment3D v2 = Segment3D(s, e);
 
-    Vector3D intersection = Intersect(v1, v2);
-    cout << intersection;
+    optional<Vector3D> intersect = Intersect(v1, v2);
+    if (intersect)
+        cout << intersect.value();
+    else 
+        cout << "Unique solution does not exist";
 }
 
 // Запуск программы: CTRL+F5 или меню "Отладка" > "Запуск без отладки"
