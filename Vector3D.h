@@ -12,26 +12,20 @@ public:
     double z() const;
     double norm() const;
 
-    void x(double a);
-    void y(double a);
-    void z(double a);
+    vector<double> vectorize() const;
 
-    void operator+=(const Vector3D& other);
-    void operator-=(const Vector3D& other);
     void operator*=(double a);
 
     Vector3D operator+(const Vector3D& other) const;
     Vector3D operator-(const Vector3D& other) const;
-    double operator*(const Vector3D& other) const;
     friend Vector3D operator*(const Vector3D& v, double a);
-    Vector3D cross_prod(const Vector3D& other) const;
-
+    friend std::ostream& operator << (std::ostream&, const Vector3D&);
 };
 
 class Segment3D {
 public:
-    Vector3D start;
-    Vector3D end;
+    Vector3D START;
+    Vector3D END;
 
     Segment3D();
     Segment3D(Vector3D, Vector3D);
@@ -42,7 +36,5 @@ public:
     double z() const;
     double norm() const;
 
-    double dist(const Segment3D& other) const;
-    Vector3D Intersect(const Segment3D& other) const;
-    
+    friend std::ostream& operator << (std::ostream&, const Segment3D&);
 };

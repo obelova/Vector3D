@@ -3,7 +3,10 @@
 
 #include <iostream>
 #include<cmath>
+#include<vector>
 #include "Vector3D.h"
+
+#define eps 1.e-20
 
 using namespace std;
 
@@ -22,23 +25,10 @@ double Vector3D::z() const {
 double Vector3D::norm() const {
     return (sqrt(abs(this->x() * this->x() + this->y() * this->y() + this->z() * this->z())));
 }
-
-void Vector3D::x(double x) {
-    this->X = x;
-}
-void Vector3D::y(double y) {
-    this->Y = y;
-}
-void Vector3D::z(double z) {
-    this->Z = z;
+vector<double> Vector3D::vectorize() const {
+    return {this->x(), this->y(), this->z()};
 }
 
-void Vector3D::operator += (const Vector3D& other) {
-    *this = Vector3D(this->x() + other.x(), this->y() + other.y(), this->z() + other.z());
-}
-void Vector3D::operator -= (const Vector3D& other) {
-    *this = Vector3D(this->x() - other.x(), this->y() - other.y(), this->z() - other.z());
-}
 void Vector3D::operator *= (double a) {
     *this = Vector3D(this->x() * a, this->y() * a, this->z() * a);
 }
@@ -49,52 +39,104 @@ Vector3D Vector3D::operator + (const Vector3D& other) const {
 Vector3D Vector3D::operator - (const Vector3D& other) const {
     return Vector3D(this->x() - other.x(), this->y() - other.y(), this->z() - other.z());
 }
-double Vector3D::operator * (const Vector3D& other) const {
-    return (this->x() * other.x() + this->y() * other.y() + this->z() * other.z());
-}
 Vector3D operator * (const Vector3D& v, double a) {
-    return Vector3D(v.x() * a, v.y() * a, v.z() * a);
+    return Vector3D(a * v.x(), a * v.y(), a * v.z());
 }
-Vector3D Vector3D::cross_prod(const Vector3D& other) const {
-    return Vector3D(this->y() * other.z() - this->x() * other.y(), this->z() * other.x() - this->x() * other.z(), this->x() * other.y() - this->y() * other.x());
+std::ostream& operator << (std::ostream& s, const Vector3D& v) {
+    s << "(" << v.x() << ", " << v.y() << ", " << v.z() << ")";
+    return s;
 }
 
-Segment3D::Segment3D() : start(Vector3D(0, 0, 0)), end(Vector3D(0, 0, 0)) {}
-Segment3D::Segment3D(Vector3D START, Vector3D END) : start(START), end(END) {}
+Segment3D::Segment3D() : START(Vector3D()), END(Vector3D()) {}
+Segment3D::Segment3D(Vector3D start, Vector3D end) : START(start), END(end) {}
 
 Vector3D Segment3D::toVector3D() const {
-    return (this->end - this->start);
+    return (this->END - this->START);
 }
 double Segment3D::x() const {
-    return (this->end - this->start).x();
+    return this->toVector3D().x();
 }
 double Segment3D::y() const {
-    return (this->end - this->start).y();
+    return this->toVector3D().y();
 }
 double Segment3D::z() const {
-    return (this->end - this->start).z();
+    return this->toVector3D().z();
 }
 double Segment3D::norm() const {
-    return (this->end - this->start).norm();
+    return this->toVector3D().norm();
 }
-double Segment3D::dist(const Segment3D& other) const {
-    Vector3D e = this->toVector3D().cross_prod(other.toVector3D()) * (1 / this->norm() / other.norm());
-    return abs((other.end - this->end) * e);
-}
-Vector3D Segment3D::Intersect(const Segment3D& other) const {
-    if (this->dist(other) > 0.) return Vector3D();
-    else {
-        double alpha = (other.start - this->start) * (this->toVector3D() * other.norm() * other.norm() - other.toVector3D() * (this->toVector3D() * other.toVector3D()));
-        alpha *= (1 / (this->norm() * this->norm() * other.norm() * other.norm() - (this->toVector3D() * other.toVector3D()) * (this->toVector3D() * other.toVector3D())));
-        return this->start * (1. - alpha) + this->end * alpha;
+
+//void Segment3D::start(const Vector3D& s) {
+//    *this = ;
+//}
+
+Vector3D Intersect(const Segment3D& v1, const Segment3D& v2) {
+    vector<vector<double>> matr;
+    for (int i = 0; i < 3; i++) {
+        matr[i][0] = v1.toVector3D().vectorize()[i];
+        matr[i][1] = -v2.toVector3D().vectorize()[i];
+        matr[i][2] = v2.START.vectorize()[i] - v2.START.vectorize()[i];
     }
+    triangulize(matr);
+    if (abs(matr[2][2]) > eps) return;
+    if (abs(matr[1][1]) < eps || matr[0][0] < eps) return;
+    double b = matr[1][2] / matr[1][1];
+    if (b < 0. || b > 1.) return;
+    return v2.START + v2.toVector3D() * b;
+}
+int max_col(const vector<vector<double>>& matrix, int col) {
+    double max = abs(matrix[col][col]);
+    int max_pos = col;
+    for (int i = col + 1; i < 3; i++) {
+        double temp = abs(matrix[i][col]);
+        if (temp > max) {
+            max = temp;
+            max_pos = i;
+        }
+    }
+    return max_pos;
+}
+void triangulize(vector<vector<double>>& matr) {
+    double c;
+    for (int k = 0; k < 2; k++) {
+        int m = max_col(matr, k);
+        swap(matr[k], matr[m]);
+        c = matr[k][k];
+        if (abs(c) < eps) continue;
+        for (int j = k + 1; j < 3; j++) {
+            for (int i = k + 1; i < 3; i++)
+                matr[j][i] -= matr[j][i] * (matr[j][k] / c);
+        }
+    }
+}
+
+std::ostream& operator << (std::ostream& s, const Segment3D& seg) {
+    s << seg.START << " -> " << seg.END;
+    return s;
 }
 
  
 int main()
 {
-    double x1, y1, z1, x2, y2, z2;
+    double x, y, z;
+    Vector3D s, e;
 
+    cout << "\n input v1 coord: ";
+    cin >> x >> y >> z;
+    s = Vector3D(x, y, z);
+    cin >> x >> y >> z;
+    e = Vector3D(x, y, z);
+    Segment3D v1 = Segment3D(s, e);
+    
+    cout << "\n input v2 coord: ";
+    cin >> x >> y >> z;
+    s = Vector3D(x, y, z);
+    cin >> x >> y >> z;
+    e = Vector3D(x, y, z);
+    Segment3D v2 = Segment3D(s, e);
+
+    Vector3D intersection = Intersect(v1, v2);
+    cout << intersection;
 }
 
 // Запуск программы: CTRL+F5 или меню "Отладка" > "Запуск без отладки"
