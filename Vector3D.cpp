@@ -56,7 +56,7 @@ double Segment3D::y() const {
 double Segment3D::z() const {
     return toVector3D().z();
 }
-ostream& operator << (std::ostream& s, const Segment3D& seg) {
+ostream& operator << (ostream& s, const Segment3D& seg) {
     s << seg.START << " -> " << seg.END;
     return s;
 }
@@ -119,7 +119,8 @@ optional<Vector3D> Intersect(const Segment3D& v1, const Segment3D& v2) {
    if (abs(matr[1][1]) < eps || matr[0][0] < eps) 
        return {};
    double b = matr[1][2] / matr[1][1];
-   if (b < 0. || b > 1.) 
+   double a = (matr[0][2] - matr[0][1] * b) / matr[0][0];
+   if (b < 0. || b > 1. || a < 0. || b > 1.) 
        return {};
    return v2.START + v2.toVector3D() * b;
 }
