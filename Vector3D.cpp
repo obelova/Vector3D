@@ -116,7 +116,13 @@ void triangularize(double matr[3][3]) {
     }
 }
 optional<Vector3D> Intersect(const Segment3D& v1, const Segment3D& v2) {
-   double matr[3][3];
+    if (v1.norm() < eps && v2.norm() < eps) { // проверка на совпадение вырожденных точек
+        if ((v1.START - v2.START).norm() < eps)
+            return v1.START;
+        return {};
+    }
+   
+    double matr[3][3];
 
    //заполнение матрицы { v1, -v2 | s2-s1 }
    matr[0][0] = v1.x(); matr[0][1] = -v2.x(); matr[0][2] = v2.START.x() - v1.START.x();
