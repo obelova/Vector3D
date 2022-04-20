@@ -10,9 +10,6 @@ public:
     double x() const;
     double y() const;
     double z() const;
-    double norm() const;
-
-    vector<double> vectorize() const;
 
     void operator*=(double a);
 
@@ -34,7 +31,6 @@ public:
     double x() const;
     double y() const;
     double z() const;
-    double norm() const;
 
     friend std::ostream& operator << (std::ostream&, const Segment3D&);
 };

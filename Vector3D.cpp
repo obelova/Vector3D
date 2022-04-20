@@ -3,10 +3,9 @@
 
 #include <iostream>
 #include<cmath>
-#include<vector>
 #include "Vector3D.h"
 
-#define eps 1.e-20
+constexpr double eps = std::numeric_limits<double>::epsilon();
 
 using namespace std;
 
@@ -14,35 +13,29 @@ Vector3D::Vector3D() : X(0), Y(0), Z(0) {}
 Vector3D::Vector3D(double x, double y, double z) : X(x), Y(y), Z(z) {}
 
 double Vector3D::x() const {
-    return this->X;
+    return X;
 }
 double Vector3D::y() const {
-    return this->Y;
+    return Y;
 }
 double Vector3D::z() const {
-    return this->Z;
-}
-double Vector3D::norm() const {
-    return (sqrt(abs(this->x() * this->x() + this->y() * this->y() + this->z() * this->z())));
-}
-vector<double> Vector3D::vectorize() const {
-    return {this->x(), this->y(), this->z()};
+    return Z;
 }
 
 void Vector3D::operator *= (double a) {
-    *this = Vector3D(this->x() * a, this->y() * a, this->z() * a);
+    *this = Vector3D(x() * a, y() * a, z() * a);
 }
 
 Vector3D Vector3D::operator + (const Vector3D& other) const {
-    return Vector3D(this->x() + other.x(), this->y() + other.y(), this->z() + other.z());
+    return Vector3D(x() + other.x(), y() + other.y(), z() + other.z());
 }
 Vector3D Vector3D::operator - (const Vector3D& other) const {
-    return Vector3D(this->x() - other.x(), this->y() - other.y(), this->z() - other.z());
+    return Vector3D(x() - other.x(), y() - other.y(), z() - other.z());
 }
 Vector3D operator * (const Vector3D& v, double a) {
     return Vector3D(a * v.x(), a * v.y(), a * v.z());
 }
-std::ostream& operator << (std::ostream& s, const Vector3D& v) {
+ostream& operator << (std::ostream& s, const Vector3D& v) {
     s << "(" << v.x() << ", " << v.y() << ", " << v.z() << ")";
     return s;
 }
@@ -51,71 +44,80 @@ Segment3D::Segment3D() : START(Vector3D()), END(Vector3D()) {}
 Segment3D::Segment3D(Vector3D start, Vector3D end) : START(start), END(end) {}
 
 Vector3D Segment3D::toVector3D() const {
-    return (this->END - this->START);
+    return (END - START);
 }
 double Segment3D::x() const {
-    return this->toVector3D().x();
+    return toVector3D().x();
 }
 double Segment3D::y() const {
-    return this->toVector3D().y();
+    return toVector3D().y();
 }
 double Segment3D::z() const {
-    return this->toVector3D().z();
+    return toVector3D().z();
 }
-double Segment3D::norm() const {
-    return this->toVector3D().norm();
-}
-
-//void Segment3D::start(const Vector3D& s) {
-//    *this = ;
-//}
-
-Vector3D Intersect(const Segment3D& v1, const Segment3D& v2) {
-    vector<vector<double>> matr;
-    for (int i = 0; i < 3; i++) {
-        matr[i][0] = v1.toVector3D().vectorize()[i];
-        matr[i][1] = -v2.toVector3D().vectorize()[i];
-        matr[i][2] = v2.START.vectorize()[i] - v2.START.vectorize()[i];
-    }
-    triangulize(matr);
-    if (abs(matr[2][2]) > eps) return;
-    if (abs(matr[1][1]) < eps || matr[0][0] < eps) return;
-    double b = matr[1][2] / matr[1][1];
-    if (b < 0. || b > 1.) return;
-    return v2.START + v2.toVector3D() * b;
-}
-int max_col(const vector<vector<double>>& matrix, int col) {
-    double max = abs(matrix[col][col]);
-    int max_pos = col;
-    for (int i = col + 1; i < 3; i++) {
-        double temp = abs(matrix[i][col]);
-        if (temp > max) {
-            max = temp;
-            max_pos = i;
-        }
-    }
-    return max_pos;
-}
-void triangulize(vector<vector<double>>& matr) {
-    double c;
-    for (int k = 0; k < 2; k++) {
-        int m = max_col(matr, k);
-        swap(matr[k], matr[m]);
-        c = matr[k][k];
-        if (abs(c) < eps) continue;
-        for (int j = k + 1; j < 3; j++) {
-            for (int i = k + 1; i < 3; i++)
-                matr[j][i] -= matr[j][i] * (matr[j][k] / c);
-        }
-    }
-}
-
-std::ostream& operator << (std::ostream& s, const Segment3D& seg) {
+ostream& operator << (std::ostream& s, const Segment3D& seg) {
     s << seg.START << " -> " << seg.END;
     return s;
 }
 
- 
+int max_col(double* matr[], int col) { //  функция ищет номер ряда, в котором находится максимальный по модулю элемент под диагональю
+    double max = abs(matr[col][col]);
+    int m = col;
+    for (int i = col + 1; i < 3; i++) {
+        double temp = abs(matr[i][col]);
+        if (temp > max) {
+            max = temp;
+            m = i;
+        }
+    }
+    return m;
+}
+void swap_rows(double* matr[], int r1, int r2) { // меняет ряды r1 и r2 местами
+    for (int i = 0; i < 3; i++)
+        swap(matr[r1][i], matr[r2][i]);
+}
+void triangularize(double* matr[]) {
+    double c, temp;
+
+    int n = max_col(matr, 0); // поиск ведущего ряда для нулевого столбца
+    swap_rows(matr, 0, n); // меняем первую и ведущую строку
+    if (abs(matr[0][0]) > eps) // проверяем элемент [0][0], еси нулевой -> переходим к столбцу 1
+        for (int i = 1; i < 3; i++) {
+            temp = matr[i][0];
+            if (abs(temp) < eps) continue; // если элемент  нулевого столбца в данном ряду 0, переходим к следующей строке
+            c = matr[0][0] / temp; // коэф. пропорциональности
+            for (int j = 0; j < 3; j++) // отнимаем от рядов 1 и 2 строку 0 с учетом коэф.
+                matr[i][j] -= c * matr[i][j];
+        }
+
+    n = max_col(matr, 1); //аналогично для 1 столбца
+    swap_rows(matr, 1, n);
+    if (abs(matr[1][1]) > eps) { // проверяем элемент [1][1], если нулевой, то приведение окончено
+        temp = matr[2][1];
+        if (abs(temp) > eps) { // если элемент [2][1] нулевой, приведение окончено
+            c = matr[1][1] / temp;
+            for (int i = 0; i < 3; i++)
+                matr[2][i] -= c * matr[2][i]; // отнимаем от ряда 2 ряд 1 с учетом коэф.
+        }
+    }
+}
+Vector3D Intersect(const Segment3D& v1, const Segment3D& v2) {
+   double* matr[3];
+
+   //заполнение матрицы { v1, -v2 | s2-s1 }
+   matr[0][0] = v1.x(); matr[0][1] = -v2.x(); matr[0][2] = v2.START.x() - v1.START.x();
+   matr[1][0] = v1.y(); matr[1][1] = -v2.y(); matr[1][2] = v2.START.y() - v1.START.y();
+   matr[2][0] = v1.z(); matr[2][1] = -v2.z(); matr[2][2] = v2.START.z() - v1.START.z();
+
+   triangularize(matr);
+
+    if (abs(matr[2][2]) > eps) return Vector3D();
+    if (abs(matr[1][1]) < eps || matr[0][0] < eps) return Vector3D();
+    double b = matr[1][2] / matr[1][1];
+    if (b < 0. || b > 1.) return Vector3D();
+    return v2.START + v2.toVector3D() * b;
+}
+
 int main()
 {
     double x, y, z;
