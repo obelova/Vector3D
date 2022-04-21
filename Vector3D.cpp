@@ -39,7 +39,7 @@ Vector3D Vector3D::operator - (const Vector3D& other) const {
 Vector3D operator * (const Vector3D& v, double a) {
     return Vector3D(a * v.x(), a * v.y(), a * v.z());
 }
-ostream& operator << (std::ostream& s, const Vector3D& v) {
+ostream& operator << (ostream& s, const Vector3D& v) {
     s << "(" << v.x() << ", " << v.y() << ", " << v.z() << ")";
     return s;
 }
@@ -92,18 +92,18 @@ void triangularize(double matr[3][3]) {
     double c;
     int n;
 
-    for (int j = 0; j < 2; j++) {
-        n = max_col(matr, j);
+    for (int j = 0; j < 2; j++) { // достаточно очистить элементы столбцов 0 и 1, j -- номер столбца
+        n = max_col(matr, j); // ищем строку с максимальным элементом под диагональю в столбце j
         if (n != j) 
-            swap_rows(matr, j, n);
-        c = matr[j][j];
-        if (abs(c) < eps)
+            swap_rows(matr, j, n); // меняем ряды, если строка не номера j
+        c = matr[j][j]; // запоминаем первый элемент ведущей строки
+        if (abs(c) < eps) // если столбец пустой, переходим к следующему
             continue;
-        for (int k = j; k < 3; k++)
+        for (int k = j; k < 3; k++) // нормируем строку j так, чтобы первый элемент был равен 1.
             matr[j][k] /= c;
-        for (int i = j + 1; i < 3; i++) {
-            c = matr[i][j];
-            for (int k = j; k < 3; k++)
+        for (int i = j + 1; i < 3; i++) { // i -- номер строки, от которой отнимаем с соответсвующим коэф. ведущую строку
+            c = matr[i][j]; // запоминаем элемент строки i столбца j
+            for (int k = j; k < 3; k++) // отнимаем строку так, чтобы элемент [i][j] занулился
                 matr[i][k] -= c * matr[j][k];
         }
     }
@@ -162,7 +162,7 @@ optional<Vector3D> Intersect(const Segment3D& v1, const Segment3D& v2) {
    }
    b = matr[1][2] / matr[1][1];
    a = (matr[0][2] - matr[0][1] * b) / matr[0][0];
-   if (b < 0. || b > 1. || a < 0. || b > 1.) 
+   if (b < 0. || b > 1. || a < 0. || a > 1.) 
        return {};
    return v2.START + v2.toVector3D() * b;
 }
