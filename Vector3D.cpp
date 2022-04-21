@@ -90,31 +90,25 @@ void swap_rows(double matr[3][3], int r1, int r2) { // меняет ряды r1 
 }
 void triangularize(double matr[3][3]) {
     double c;
+    int n;
 
-    int n = max_col(matr, 0); // поиск ведущего ряда для нулевого столбца
-    swap_rows(matr, 0, n); // меняем первую и ведущую строку
-    if (abs(matr[0][0]) > eps) { // проверяем элемент [0][0], если нулевой -> переходим к столбцу 1
-        c = matr[0][0]; // сохраняем значение [0][0]
-        for (int i = 0; i < 3; i++) // делим 0 строку на первый элемент
-            matr[0][i] /= c;
-        for (int i = 1; i < 3; i++) { // от i-ой строки отнимаем нулевую, домноженную на нулевой элемент данной строки
-            c = matr[i][0]; // сохраняем нулевой элемент данной строки
-            for (int j = 0; j < 3; j++)
-                matr[i][j] -= c * matr[0][j];
+    for (int j = 0; j < 2; j++) {
+        n = max_col(matr, j);
+        if (n != j) 
+            swap_rows(matr, j, n);
+        c = matr[j][j];
+        if (abs(c) < eps)
+            continue;
+        for (int k = j; k < 3; k++)
+            matr[j][k] /= c;
+        for (int i = j + 1; i < 3; i++) {
+            c = matr[i][j];
+            for (int k = j; k < 3; k++)
+                matr[i][k] -= c * matr[j][k];
         }
     }
-
-    n = max_col(matr, 1); //аналогично для 1 столбца
-    swap_rows(matr, 1, n);
-    if (abs(matr[1][1]) > eps) { // проверяем элемент [1][1], если нулевой, то приведение окончено
-        c = matr[1][1]; // сохраняем элемент [1][1]
-        for (int i = 1; i < 3; i++) // делим элементы 1-ой строки на элемент [1][1]
-            matr[1][i] /= c;
-        c = matr[2][1]; // сохраняем элемент [2][1]
-        for (int i = 1; i < 3; i++) // отнимаем от последней строки строку 1 с домножением на элемент [2][1]
-            matr[2][i] -= c * matr[1][i];
-    }
 }
+
 optional<Vector3D> Intersect(const Segment3D& v1, const Segment3D& v2) {
     if (v1.norm() < eps && v2.norm() < eps) { // проверка на совпадение вырожденных точек
         if ((v1.START - v2.START).norm() < eps)
